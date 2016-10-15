@@ -1,4 +1,41 @@
 synkr
 =====
 
-Simple file sync app.
+Simple sync app supporting local file system and AWS S3
+
+Build
+=====
+
+syncr uses `sbt` and `sbt-native-packager` which can produce multiple artifacts
+
+To build a Debian package:
+
+     sbt debian:packageBin
+
+
+Configuration
+=============
+
+synr is looking for a `synk.conf` file in `~/.synkr`
+which should look like this:
+
+```
+aws {
+  access.key = "theawskey"
+  access.secret = "theawssecret"
+}
+
+sync {
+  firstsync {
+    source = /home/user/folder
+    sourceFile = afile.ext
+    target = abucket
+    targetFile = akeyinthebucket
+  }
+}
+```
+
+License
+=======
+
+MIT
