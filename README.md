@@ -16,7 +16,7 @@ To build a Debian package:
 Configuration
 =============
 
-synr is looking for a `synk.conf` file in `~/.synkr`
+synr is looking for a `synkr.conf` file in `~/.synkr`
 which should look like this:
 
 ```
