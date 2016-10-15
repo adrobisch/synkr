@@ -65,7 +65,7 @@ trait SynkrApp {
         )
       }
 
-      AppConfiguration(SyncerConfiguration(syncConfigs, Some(appFolderFile(".backups").getAbsolutePath)), awsCredentialConfig)
+      AppConfiguration(SyncerConfiguration(syncConfigs, Some(appFolderFile("backups").getAbsolutePath)), awsCredentialConfig)
     }.toOption
   }
 
