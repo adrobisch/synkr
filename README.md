@@ -6,7 +6,7 @@ Simple sync app supporting local file system and AWS S3
 Build
 =====
 
-syncr uses `sbt` and `sbt-native-packager` which can produce multiple artifacts
+syncr uses `sbt` and `sbt-native-packager` which can produce various package types, see the documentation for details: https://github.com/sbt/sbt-native-packager
 
 To build a Debian package:
 
