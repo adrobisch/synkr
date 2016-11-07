@@ -3,7 +3,7 @@ package com.drobisch.synkr
 import java.io.File
 import java.util.concurrent.{Executors, TimeUnit}
 
-import com.amazonaws.auth.{AWSCredentialsProviderChain, AWSStaticCredentialsProvider, BasicAWSCredentials, DefaultAWSCredentialsProviderChain}
+import com.amazonaws.auth.{AWSStaticCredentialsProvider, BasicAWSCredentials, DefaultAWSCredentialsProviderChain}
 import com.drobisch.synkr.Helper.LogTry
 import com.typesafe.config.{ConfigFactory, ConfigObject}
 import org.slf4j.LoggerFactory
