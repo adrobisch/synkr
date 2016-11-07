@@ -9,7 +9,7 @@ class LocalFileBackend extends FileBackend {
   override def getFile(container: Option[String], path: String): Option[VersionedFile] = LogTry {
     container
       .map(new File(_, path))
-      .map(file => VersionedFile(Some(file.getParentFile.getAbsolutePath), file.getName, file.lastModified(), new FileInputStream(file)))
+      .map(file => VersionedFile(Some(file.getParentFile.getAbsolutePath), file.getName, file.lastModified(), _ => new FileInputStream(file)))
   }.toOption.flatten
 
   override def putFile(container: Option[String], path: String, inputStream: InputStream, lastModified: Option[Long]): Option[String] = LogTry {
