@@ -22,15 +22,12 @@ case class FileSyncConfig(id: String,
 class Syncer(configuration: SyncerConfiguration,
              remoteFileBackend: FileBackend,
              localFileBackend: FileBackend) {
-  val log = LoggerFactory.getLogger(getClass)
-
   def sync: Unit = {
     configuration.fileSyncs.map(config => for {
       remoteFile <- remoteFileBackend.getFile(config.remoteContainer, config.remotePath)
       localFile <- localFileBackend.getFile(config.localContainer, config.localPath)
     } yield remoteFile.version.compareTo(localFile.version) match {
       case 0 =>
-        log.debug(s"equal: $remoteFile, $localFile")
 
       case c if c < 0 =>
         updateRemote(localFile, remoteFile)
@@ -41,7 +38,6 @@ class Syncer(configuration: SyncerConfiguration,
   }
 
   def updateLocal(localFile: VersionedFile, remoteFile: VersionedFile) = {
-    log.info("remote is newer, updating local:")
     backup(localFile, "local")
     val content = remoteFile.content()
     localFileBackend.putFile(localFile.container, localFile.name, content, Some(remoteFile.version))
@@ -49,7 +45,6 @@ class Syncer(configuration: SyncerConfiguration,
   }
 
   def updateRemote(localFile: VersionedFile, remoteFile: VersionedFile) = {
-    log.info("updating remote:")
     backup(remoteFile, "remote")
     val content = localFile.content()
     remoteFileBackend.putFile(remoteFile.container, remoteFile.name, content, Some(localFile.version))

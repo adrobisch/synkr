@@ -12,37 +12,8 @@ case class AWSCredentialConfig(awsAccessId: String, awsSecretKey: String)
 
 case class AppConfiguration(syncerConfiguration: SyncerConfiguration, awsConfig: Option[AWSCredentialConfig])
 
-trait SynkrApp {
-  self: App =>
-
-  val log = LoggerFactory.getLogger(getClass)
-
-  def start = {
-    loadConfig.map { config =>
-      val s3FileBackend = config
-        .awsConfig
-        .map(aws => new AWSStaticCredentialsProvider(new BasicAWSCredentials(aws.awsAccessId, aws.awsSecretKey)))
-        .map(new S3FileBackend(_))
-        .getOrElse(new S3FileBackend(new DefaultAWSCredentialsProviderChain))
-
-      val syncer = new Syncer(config.syncerConfiguration, s3FileBackend, new LocalFileBackend)
-      val interval = 5
-      val unit = TimeUnit.SECONDS
-
-      log.info(s"starting sync every $interval $unit with configuration $config")
-
-      val scheduler = Executors.newSingleThreadScheduledExecutor()
-
-      scheduler.scheduleAtFixedRate(new Runnable {
-        override def run(): Unit = {
-          LogTry(syncer.sync)
-          Unit
-        }
-      }, 0, interval, unit)
-    }
-  }
-
-  def loadConfig: Option[AppConfiguration] = {
+object AppConfiguration {
+  def load: Option[AppConfiguration] = {
     import scala.collection.JavaConverters._
 
     LogTry {
@@ -74,8 +45,40 @@ trait SynkrApp {
   lazy val userHome = System.getProperty("user.home")
 }
 
-object DefaultApp extends SynkrApp with App {
-  start
+trait SynkrApp {
+  self: App =>
 
-  new SystemTray().createTray
+  val log = LoggerFactory.getLogger(getClass)
+
+  def start = {
+    AppConfiguration.load.map { config =>
+      val s3FileBackend = config
+        .awsConfig
+        .map(aws => new AWSStaticCredentialsProvider(new BasicAWSCredentials(aws.awsAccessId, aws.awsSecretKey)))
+        .map(new S3FileBackend(_))
+        .getOrElse(new S3FileBackend(new DefaultAWSCredentialsProviderChain))
+
+      val syncer = new Syncer(config.syncerConfiguration, s3FileBackend, new LocalFileBackend)
+      val interval = 5
+      val unit = TimeUnit.SECONDS
+
+      log.info(s"starting sync every $interval $unit with configuration $config")
+
+      val scheduler = Executors.newSingleThreadScheduledExecutor()
+
+      scheduler.scheduleAtFixedRate(new Runnable {
+        override def run(): Unit = {
+          LogTry(syncer.sync)
+          Unit
+        }
+      }, 0, interval, unit)
+    }
+  }
+
+}
+
+object DefaultApp extends SynkrApp with App {
+  start.foreach { appConfig =>
+    new SystemTray().createTray
+  }
 }
