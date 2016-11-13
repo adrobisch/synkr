@@ -2,44 +2,48 @@ package com.drobisch.synkr
 
 import java.io.InputStream
 
-import org.slf4j.LoggerFactory
+case class VersionedFile(location: Location, version: Long)
 
-case class VersionedFile(container: Option[String], name: String, version: Long, content: Unit => InputStream)
+trait FileReader {
+  def getFile(location: Location): Option[VersionedFile]
+}
 
-trait FileBackend {
-  def getFile(container: Option[String], path: String): Option[VersionedFile]
-  def putFile(container: Option[String], path: String, inputStream: InputStream, lastModified: Option[Long]): Option[String]
+trait FileWriter {
+  def putFile(location: Location, inputStream: InputStream, lastModified: Option[Long]): Option[String]
 }
 
 case class SyncerConfiguration(fileSyncs: Seq[FileSyncConfig], backupContainer: Option[String])
 
-case class FileSyncConfig(id: String,
-                          remoteContainer: Option[String],
-                          remotePath: String,
-                          localContainer: Option[String],
-                          localPath: String)
+case class Location(container: Option[String], path: String)
 
-class Syncer(configuration: SyncerConfiguration,
-             remoteFileBackend: FileBackend,
-             localFileBackend: FileBackend) {
-  def sync: Unit = {
-    configuration.fileSyncs.map(config => for {
-      remoteFile <- remoteFileBackend.getFile(config.remoteContainer, config.remotePath)
-      localFile <- localFileBackend.getFile(config.localContainer, config.localPath)
+case class FileSyncConfig(id: String,
+                          remoteLocation: Location,
+                          localLocation: Location)
+
+case class ComparedFiles(localFile: VersionedFile, remoteFile: VersionedFile)
+
+trait Syncer {
+  type Update = ComparedFiles => Unit
+
+  def sync(fileSyncs: Seq[FileSyncConfig], remoteFileReader: FileReader, localFileReader: FileReader)(localUpate: Update, remoteUpdate: Update)  = {
+    fileSyncs.map(fileSync => for {
+      remoteFile <- remoteFileReader.getFile(fileSync.remoteLocation)
+      localFile <- localFileReader.getFile(fileSync.localLocation)
     } yield remoteFile.version.compareTo(localFile.version) match {
       case 0 =>
 
       case c if c < 0 =>
-        updateRemote(localFile, remoteFile)
+        remoteUpdate(ComparedFiles(localFile, remoteFile))
 
       case c if c > 0 =>
-        updateLocal(localFile, remoteFile)
+        localUpate(ComparedFiles(localFile, remoteFile))
     })
   }
+}
 
-  def updateLocal(localFile: VersionedFile, remoteFile: VersionedFile) = {
-    backup(localFile, "local")
-    val content = remoteFile.content()
+object LocalFSToS3 {
+  val updateLocal = ((comparedFiles: ComparedFiles) => {
+    S3FileBackend.getFileContent(comparedFiles.remoteFile.location).map(content => )
     localFileBackend.putFile(localFile.container, localFile.name, content, Some(remoteFile.version))
     content.close
   }
