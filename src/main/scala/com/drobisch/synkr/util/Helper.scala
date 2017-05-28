@@ -1,14 +1,11 @@
-package com.drobisch.synkr
+package com.drobisch.synkr.util
 
-import org.slf4j.LoggerFactory
+import org.slf4j.{Logger, LoggerFactory}
 
 import scala.util.{Failure, Try}
 
-/**
-  * Created by adrobisch on 10/13/16.
-  */
 object Helper {
-  val log = LoggerFactory.getLogger(getClass)
+  val log: Logger = LoggerFactory.getLogger(getClass)
 
   def LogTry[A](computation: => A): Try[A] = {
     Try(computation) recoverWith {

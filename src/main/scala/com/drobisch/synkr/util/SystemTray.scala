@@ -1,4 +1,4 @@
-package com.drobisch.synkr
+package com.drobisch.synkr.util
 
 import java.awt._
 import java.awt.event.ActionListener

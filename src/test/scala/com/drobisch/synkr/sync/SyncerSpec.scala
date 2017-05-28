@@ -1,5 +1,7 @@
-package com.drobisch.synkr
+package com.drobisch.synkr.sync
 
+import com.drobisch.synkr.config.FileSyncConfig
+import com.drobisch.synkr.file.FileBackend
 import org.scalamock.function.MockFunction1
 import org.scalamock.scalatest.proxy.MockFactory
 import org.scalatest.FlatSpec

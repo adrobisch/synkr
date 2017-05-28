@@ -1,6 +1,8 @@
-package com.drobisch.synkr
+package com.drobisch.synkr.file
 
 import java.io.InputStream
+
+import com.drobisch.synkr.sync.{Location, VersionedFile}
 
 import scala.concurrent.Future
 

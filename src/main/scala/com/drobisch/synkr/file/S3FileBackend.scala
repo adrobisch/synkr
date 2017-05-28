@@ -1,10 +1,11 @@
-package com.drobisch.synkr
+package com.drobisch.synkr.file
 
 import java.io.InputStream
 
 import com.amazonaws.services.s3.AmazonS3
 import com.amazonaws.services.s3.model.{ObjectMetadata, S3ObjectInputStream}
-import com.drobisch.synkr.Helper.LogTry
+import com.drobisch.synkr.util.Helper.LogTry
+import com.drobisch.synkr.sync.{Location, VersionedFile}
 
 import scala.concurrent.Future
 import scala.util.Try

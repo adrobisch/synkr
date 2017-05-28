@@ -1,9 +1,10 @@
-package com.drobisch.synkr
+package com.drobisch.synkr.file
 
 import java.io.{File, FileInputStream, InputStream}
 import java.nio.file.{Files, Path, Paths, StandardCopyOption}
 
-import Helper.LogTry
+import com.drobisch.synkr.util.Helper.LogTry
+import com.drobisch.synkr.sync.{Location, VersionedFile}
 
 import scala.concurrent.Future
 
