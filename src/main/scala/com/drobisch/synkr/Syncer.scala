@@ -1,16 +1,9 @@
 package com.drobisch.synkr
 
-import java.io.InputStream
+import scala.concurrent.Await
+import scala.concurrent.ExecutionContext.Implicits.global
 
 case class VersionedFile(location: Location, version: Long)
-
-trait FileReader {
-  def getFile(location: Location): Option[VersionedFile]
-}
-
-trait FileWriter {
-  def putFile(location: Location, inputStream: InputStream, lastModified: Option[Long]): Option[String]
-}
 
 case class SyncerConfiguration(fileSyncs: Seq[FileSyncConfig], backupContainer: Option[String])
 
@@ -25,10 +18,18 @@ case class ComparedFiles(localFile: VersionedFile, remoteFile: VersionedFile)
 trait Syncer {
   type Update = ComparedFiles => Unit
 
-  def sync(fileSyncs: Seq[FileSyncConfig], remoteFileReader: FileReader, localFileReader: FileReader)(localUpate: Update, remoteUpdate: Update)  = {
-    fileSyncs.map(fileSync => for {
-      remoteFile <- remoteFileReader.getFile(fileSync.remoteLocation)
-      localFile <- localFileReader.getFile(fileSync.localLocation)
+  val remoteFileBackend: FileBackend
+
+  val localFileBackend: FileBackend
+
+  def localUpdate: Update
+
+  def remoteUpdate: Update
+
+  def sync(configs: Seq[FileSyncConfig])  = {
+    configs.map(fileSync => for {
+      remoteFile <- remoteFileBackend.getFile(fileSync.remoteLocation)
+      localFile <- localFileBackend.getFile(fileSync.localLocation)
     } yield remoteFile.version.compareTo(localFile.version) match {
       case 0 =>
 
@@ -36,29 +37,37 @@ trait Syncer {
         remoteUpdate(ComparedFiles(localFile, remoteFile))
 
       case c if c > 0 =>
-        localUpate(ComparedFiles(localFile, remoteFile))
+        localUpdate(ComparedFiles(localFile, remoteFile))
     })
   }
 }
 
-object LocalFSToS3 {
-  val updateLocal = ((comparedFiles: ComparedFiles) => {
-    S3FileBackend.getFileContent(comparedFiles.remoteFile.location).map(content => )
-    localFileBackend.putFile(localFile.container, localFile.name, content, Some(remoteFile.version))
-    content.close
+class LocalFSToS3(val remoteFileBackend: FileBackend, val localFileBackend: FileBackend) extends Syncer with Configuration {
+  override def localUpdate = (files: ComparedFiles) => {
+    val content = remoteFileBackend.getContent(files.remoteFile.location)
+    content.map { fileContent =>
+      localFileBackend.putFile(files.localFile.location, fileContent, Some(files.remoteFile.version))
+      fileContent.close()
+    }
   }
 
-  def updateRemote(localFile: VersionedFile, remoteFile: VersionedFile) = {
-    backup(remoteFile, "remote")
-    val content = localFile.content()
-    remoteFileBackend.putFile(remoteFile.container, remoteFile.name, content, Some(localFile.version))
-    content.close
+  override def remoteUpdate = (files: ComparedFiles) => {
+    backup(files.remoteFile, "remote")
+    localFileBackend.getContent(files.localFile.location).map { fileContent =>
+      remoteFileBackend.putFile(files.remoteFile.location, fileContent, Some(files.localFile.version))
+      fileContent.close()
+    }
   }
 
-  def backup(file: VersionedFile, infix: String): Option[String] = {
-    val content = file.content()
-    val md5 = localFileBackend.putFile(configuration.backupContainer, file.name + s".$infix." + file.version, content, Some(file.version))
-    content.close
-    md5
+  private def backup(file: VersionedFile, infix: String): Option[String] = {
+    import scala.concurrent.duration._
+    Await.result(remoteFileBackend.getContent(file.location).map { fileContent =>
+      val md5 = localFileBackend.putFile(
+        Location(config.syncerConfiguration.backupContainer, file.location.path + s".$infix." + file.version),
+        fileContent, Some(file.version)
+      )
+      fileContent.close()
+      md5
+    }, 300.seconds)
   }
 }
