@@ -19,5 +19,7 @@ libraryDependencies ++= Seq(
   "com.typesafe" % "config" % "1.3.1",
   "org.scalafx" %% "scalafx" % "8.0.102-R11",
   "org.scalatest" %% "scalatest" % "3.0.1" % Test,
-  "org.scalamock" %% "scalamock-scalatest-support" % "3.5.0" % Test
+  "org.scalamock" %% "scalamock-scalatest-support" % "3.5.0" % Test,
+  "org.backuity.clist" %% "clist-core"   % "3.2.2",
+  "org.backuity.clist" %% "clist-macros" % "3.2.2" % "provided"
 )

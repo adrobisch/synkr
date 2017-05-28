@@ -8,7 +8,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 class LocalFSToS3Syncer(val remoteFileBackend: FileBackend, val localFileBackend: FileBackend) extends Syncer
   with Configuration {
-  override def localUpdate = (files: ComparedFiles) => {
+  override def localUpdate: Update = (files: ComparedFiles) => {
     val content = remoteFileBackend.getContent(files.remoteFile.location)
     content.map { fileContent =>
       localFileBackend.putFile(files.localFile.location, fileContent, Some(files.remoteFile.version))
@@ -16,7 +16,7 @@ class LocalFSToS3Syncer(val remoteFileBackend: FileBackend, val localFileBackend
     }
   }
 
-  override def remoteUpdate = (files: ComparedFiles) => {
+  override def remoteUpdate: Update = (files: ComparedFiles) => {
     backup(files.remoteFile, "remote")
     localFileBackend.getContent(files.localFile.location).map { fileContent =>
       remoteFileBackend.putFile(files.remoteFile.location, fileContent, Some(files.localFile.version))
