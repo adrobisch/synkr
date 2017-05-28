@@ -37,7 +37,6 @@ class SystemTray {
     } else {
       System.err.println("Tray unavailable")
     }
-    //
   }
 
 }
