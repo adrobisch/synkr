@@ -10,7 +10,7 @@ import com.drobisch.synkr.config.Configuration
 import com.drobisch.synkr.file.{LocalFileBackend, S3FileBackend}
 import com.drobisch.synkr.sync.{LocalFSToS3Syncer, Location}
 import com.drobisch.synkr.util.Helper.LogTry
-import com.drobisch.synkr.util.SystemTray
+import com.drobisch.synkr.util.SystemTraySupport
 import org.apache.commons.codec.digest.DigestUtils
 import org.backuity.clist.Cli
 import org.backuity.clist._
@@ -45,14 +45,20 @@ trait SynkrApp extends Configuration {
   }
 }
 
-class Start extends Command(description = "start the synkr sync process") with SynkrApp with Runnable {
+class Start extends Command(name = "start", description = "start the synkr sync process") with SynkrApp with Runnable {
   override def run(): Unit = {
     startSync
-    new SystemTray().createTray
+    SystemTraySupport.createTray(("Exit", _ => System.exit(0)))
   }
 }
 
-class Check extends Command(description = "check md5sum of a local file against a remote file") with Runnable with Configuration {
+class Gui extends Command(name = "gui", description = "start the synkr gui") with SynkrApp with Runnable {
+  override def run(): Unit = {
+    SystemTraySupport.createTray(("Exit", _ => System.exit(0)))
+  }
+}
+
+class Check extends Command(name = "check", description = "check md5sum of a local file against a remote file") with Runnable with Configuration {
   var local = arg[File](description = "local file to check")
   var remote = arg[String](description = "remote file to check")
 

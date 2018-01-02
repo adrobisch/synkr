@@ -13,8 +13,9 @@ trait Configuration {
 }
 
 case class FileSyncConfig(id: String,
-                          remoteLocation: Location,
-                          localLocation: Location)
+                          targetLocation: Location,
+                          sourceLocation: Location,
+                          removeSource: Boolean = false)
 
 case class SyncerConfiguration(fileSyncs: Seq[FileSyncConfig], backupContainer: Option[String])
 

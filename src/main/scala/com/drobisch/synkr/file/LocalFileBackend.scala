@@ -7,6 +7,7 @@ import com.drobisch.synkr.util.Helper.LogTry
 import com.drobisch.synkr.sync.{Location, VersionedFile}
 
 import scala.concurrent.Future
+import scala.util.{Failure, Try}
 
 class LocalFileBackend extends FileBackend {
   override def getFile(location: Location): Option[VersionedFile] = LogTry {
@@ -40,4 +41,10 @@ class LocalFileBackend extends FileBackend {
       .map(Future.successful)
       .getOrElse(Future.failed(new IllegalArgumentException(s"unable to get $location")))
   }
+
+  override def deleteFile(location: Location): Try[Boolean] = {
+    location.container
+      .map(new File(_, location.path))
+      .map(file => Try(file.delete()))
+  }.getOrElse(Failure(new IllegalArgumentException(s"unable to delete $location, does not exist")))
 }

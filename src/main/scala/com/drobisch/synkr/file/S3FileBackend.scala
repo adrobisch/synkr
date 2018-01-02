@@ -35,4 +35,6 @@ class S3FileBackend(s3: AmazonS3) extends FileBackend {
     case Some(inputStream) => Future.successful(inputStream)
     case None => Future.failed(new IllegalArgumentException(s"unable to get content for $location"))
   }
+
+  override def deleteFile(location: Location): Try[Boolean] = ???
 }

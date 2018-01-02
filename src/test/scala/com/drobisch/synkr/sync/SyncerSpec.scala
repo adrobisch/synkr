@@ -19,11 +19,11 @@ class SyncerSpec extends FlatSpec with MockFactory {
   val localLocation = Location(Some("local-container"), "local-path")
 
   def syncerWithMocks = new Syncer {
-    override def remoteUpdate: Update = remoteUpdateMock
-    override def localUpdate: Update = localUpdateMock
+    override def targetUpdate: Update = remoteUpdateMock
+    override def sourceUpdate: Update = localUpdateMock
 
-    override val localFileBackend: FileBackend = localFileBackendMock
-    override val remoteFileBackend: FileBackend = remoteFileBackendMock
+    override val sourceBackend: FileBackend = localFileBackendMock
+    override val targetBackend: FileBackend = remoteFileBackendMock
   }
 
   it should "update remote if local version is higher" in {
