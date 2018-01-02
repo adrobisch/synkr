@@ -3,56 +3,35 @@ package com.drobisch.synkr.config
 import java.io.File
 
 import com.drobisch.synkr.sync.Location
-import com.drobisch.synkr.util.Helper.LogTry
-import com.typesafe.config.{ConfigFactory, ConfigObject}
+import com.drobisch.synkr.util.Logging
+import com.drobisch.synkr.util.Logging.LogTry
+import io.circe.parser._
+import io.circe.generic.auto._
 
-import scala.collection.JavaConverters._
+import scala.io.Source
 
 trait Configuration {
   val config: AppConfiguration = AppConfiguration.load.get
 }
 
 case class FileSyncConfig(id: String,
-                          targetLocation: Location,
-                          sourceLocation: Location,
-                          removeSource: Boolean = false)
+                          target: Location,
+                          source: Location,
+                          removeSource: Option[Boolean] = Some(false))
 
-case class SyncerConfiguration(fileSyncs: Seq[FileSyncConfig], backupContainer: Option[String])
+case class SyncerConfiguration(configs: Seq[FileSyncConfig], backupContainer: Option[String])
 
 case class AWSCredentialConfig(awsAccessId: String, awsSecretKey: String)
 
-case class AppConfiguration(syncerConfiguration: SyncerConfiguration, awsConfig: Option[AWSCredentialConfig])
+case class AppConfiguration(sync: SyncerConfiguration, aws: Option[AWSCredentialConfig])
 
-object AppConfiguration {
-  def load: Option[AppConfiguration] = {
-
-    LogTry {
-      val config = ConfigFactory.parseFile(appFolderFile("synkr.conf"))
-
-      val awsCredentialConfig = for {
-        key <- LogTry(config.getString("aws.access.key")).toOption
-        secret <- LogTry(config.getString("aws.access.secret")).toOption
-      } yield AWSCredentialConfig(key, secret)
-
-      val syncConfigs = config.getObject("sync").entrySet().asScala.toSeq.map { entry =>
-        val configObject: ConfigObject = entry.getValue.asInstanceOf[ConfigObject]
-
-        FileSyncConfig(
-          entry.getKey,
-          Location(
-            container = Option(configObject.get("target")).map(_.unwrapped().toString),
-            path = configObject.get("targetFile").unwrapped().toString
-          ),
-          Location(
-            container = Option(configObject.get("source")).map(_.unwrapped().toString),
-            path = configObject.get("sourceFile").unwrapped().toString
-          )
-        )
-      }
-
-      AppConfiguration(SyncerConfiguration(syncConfigs, Some(appFolderFile("backups").getAbsolutePath)), awsCredentialConfig)
-    }.toOption
-  }
+object AppConfiguration extends Logging {
+  def load: Option[AppConfiguration] = LogTry {
+    val configJson = Source.fromFile(appFolderFile("config.json")).getLines().mkString
+    val jsonOrError = decode[AppConfiguration](configJson)
+    jsonOrError.left.foreach(error => log.error("error in config json", error))
+    jsonOrError.right.toOption
+  }.getOrElse(None)
 
   def appFolderFile(fileName: String) = new File(new File(userHome, ".synkr"), fileName)
 

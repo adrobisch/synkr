@@ -4,9 +4,11 @@ import org.slf4j.{Logger, LoggerFactory}
 
 import scala.util.{Failure, Try}
 
-object Helper {
+trait Logging {
   val log: Logger = LoggerFactory.getLogger(getClass)
+}
 
+object Logging extends Logging {
   def LogTry[A](computation: => A): Try[A] = {
     Try(computation) recoverWith {
       case e: Throwable =>

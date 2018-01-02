@@ -3,32 +3,34 @@ package com.drobisch.synkr
 import java.io.{File, FileInputStream}
 import java.util.concurrent.{Executors, TimeUnit}
 
-import com.amazonaws.auth.{AWSStaticCredentialsProvider, BasicAWSCredentials}
-import com.amazonaws.regions.Regions
-import com.amazonaws.services.s3.AmazonS3ClientBuilder
 import com.drobisch.synkr.config.Configuration
 import com.drobisch.synkr.file.{LocalFileBackend, S3FileBackend}
-import com.drobisch.synkr.sync.{LocalFSToS3Syncer, Location}
-import com.drobisch.synkr.util.Helper.LogTry
+import com.drobisch.synkr.sync.Location.LocationResolver
+import com.drobisch.synkr.sync.{Location, LocationComparison}
+import com.drobisch.synkr.util.Logging.LogTry
 import com.drobisch.synkr.util.SystemTraySupport
 import org.apache.commons.codec.digest.DigestUtils
-import org.backuity.clist.Cli
-import org.backuity.clist._
+import org.backuity.clist.{Cli, _}
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.Await
 
-trait SynkrApp extends Configuration {
+trait SynkrApp extends LocationComparison with Configuration {
   val log = LoggerFactory.getLogger(getClass)
 
-  def startSync: Unit = {
-    val s3FileBackend = config
-      .awsConfig
-      .map(aws => new AWSStaticCredentialsProvider(new BasicAWSCredentials(aws.awsAccessId, aws.awsSecretKey)))
-      .map(credentials => new S3FileBackend(AmazonS3ClientBuilder.standard().withRegion(Regions.EU_WEST_1).withCredentials(credentials).build()))
-      .getOrElse(new S3FileBackend(AmazonS3ClientBuilder.standard().withRegion(Regions.EU_WEST_1).build()))
+  lazy val s3FileBackend: Option[S3FileBackend] = config
+    .aws
+    .map(credentials => new S3FileBackend(credentials))
 
-    val syncer = new LocalFSToS3Syncer(s3FileBackend, new LocalFileBackend)
+  lazy val localFileBackend: LocalFileBackend = new LocalFileBackend
+
+  lazy val locationResolver: LocationResolver = {
+    case Location(_, _, S3FileBackend.scheme, _) => s3FileBackend
+    case Location(_, _, LocalFileBackend.scheme, _) => Some(localFileBackend)
+    case _ => None
+  }
+
+  def startSync: Unit = {
     val interval = 5
     val unit = TimeUnit.SECONDS
 
@@ -38,7 +40,8 @@ trait SynkrApp extends Configuration {
 
     scheduler.scheduleAtFixedRate(new Runnable {
       override def run(): Unit = {
-        LogTry(syncer.sync(config.syncerConfiguration.fileSyncs))
+        val comparisonResult = compareLocations(config.sync.configs, locationResolver)
+        LogTry(log.info(s"compared: $comparisonResult"))
         Unit
       }
     }, 0, interval, unit)
@@ -58,25 +61,20 @@ class Gui extends Command(name = "gui", description = "start the synkr gui") wit
   }
 }
 
-class Check extends Command(name = "check", description = "check md5sum of a local file against a remote file") with Runnable with Configuration {
+class Check extends Command(name = "check", description = "check md5sum of a local file against a remote file") with SynkrApp with Runnable {
   var local = arg[File](description = "local file to check")
   var remote = arg[String](description = "remote file to check")
+  var region = opt[String](description = "region for remote file", default = "eu-central-1")
 
-  override def run(): Unit = {
-    val s3FileBackend: S3FileBackend = config
-      .awsConfig
-      .map(aws => new AWSStaticCredentialsProvider(new BasicAWSCredentials(aws.awsAccessId, aws.awsSecretKey)))
-      .map(credentials => new S3FileBackend(AmazonS3ClientBuilder.standard().withRegion(Regions.EU_CENTRAL_1).withCredentials(credentials).build()))
-      .getOrElse(new S3FileBackend(AmazonS3ClientBuilder.standard().withRegion(Regions.EU_CENTRAL_1).build()))
-
+  override def run(): Unit = s3FileBackend.foreach { s3 =>
     println(DigestUtils.md5Hex(new FileInputStream(local)))
     val remoteLocation = remote.replaceFirst("s3://", "").split("/").toList match {
-      case head :: tail => Location(Some(head), tail.mkString("/"))
+      case head :: tail => Location(Some(head), tail.mkString("/"), "s3", Some(region))
     }
     import scala.concurrent.ExecutionContext.Implicits.global
     import scala.concurrent.duration._
 
-    val md5Sum = Await.result(s3FileBackend.getContent(remoteLocation).map(stream => {
+    val md5Sum = Await.result(s3.getContent(remoteLocation).map(stream => {
       val md5Sum = DigestUtils.md5Hex(stream)
       stream.close()
       md5Sum
