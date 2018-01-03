@@ -1,14 +1,11 @@
 package com.drobisch.synkr.util
 
-import java.io.{File, FileInputStream}
+import java.io.{File, FileInputStream, InputStream}
 
 object Hashing {
-
-  def getMD5Hex(newFile: File): String = {
-    val fileStream = new FileInputStream(newFile)
-    val md5 = org.apache.commons.codec.digest.DigestUtils.md5Hex(fileStream)
-    fileStream.close()
+  def getMD5Hex(content: InputStream): String = {
+    val md5 = org.apache.commons.codec.digest.DigestUtils.md5Hex(content)
+    content.close()
     md5
   }
-
 }

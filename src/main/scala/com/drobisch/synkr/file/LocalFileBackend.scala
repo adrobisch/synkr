@@ -8,7 +8,6 @@ import com.drobisch.synkr.sync.{Location, VersionedFile}
 import com.drobisch.synkr.util.Hashing
 
 import scala.concurrent.Future
-import scala.util.{Failure, Try}
 
 object LocalFileBackend {
   val scheme = "file"
@@ -29,7 +28,7 @@ class LocalFileBackend extends FileBackend {
     val newFile: File = targetPath.toFile
     lastModified.map(newFile.setLastModified)
 
-    Hashing.getMD5Hex(newFile)
+    Hashing.getMD5Hex(new FileInputStream(newFile))
   }.toOption
 
   override def getContent(location: Location): Future[InputStream] = {
@@ -40,9 +39,9 @@ class LocalFileBackend extends FileBackend {
       .getOrElse(Future.failed(new IllegalArgumentException(s"unable to get $location")))
   }
 
-  override def deleteFile(location: Location): Try[Boolean] = {
+  override def deleteFile(location: Location): Future[Boolean] = {
     location.parent
       .map(new File(_, location.path))
-      .map(file => Try(file.delete()))
-  }.getOrElse(Failure(new IllegalArgumentException(s"unable to delete $location, does not exist")))
+      .map(file => Future.successful(file.delete()))
+  }.getOrElse(Future.failed(new IllegalArgumentException(s"unable to delete $location, does not exist")))
 }

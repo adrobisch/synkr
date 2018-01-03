@@ -13,20 +13,24 @@ class LocationUpdate(locationResolver: LocationResolver,
   def sourceUpdate: Update = (files: ComparedFiles) => for {
     targetBackend <- locationResolver(files.targetFile.location)
     sourceBackend <- locationResolver(files.sourceFile.location)
-    content <- targetBackend.getContent(files.targetFile.location)
+    targetContent <- targetBackend.getContent(files.targetFile.location)
   } {
-    sourceBackend.putFile(files.sourceFile.location, content, Some(files.targetFile.version))
-    content.close()
+    sourceBackend.putFile(files.sourceFile.location, targetContent, Some(files.targetFile.version))
+    targetContent.close()
   }
 
   def targetUpdate: Update = (files: ComparedFiles) => for {
     targetBackend <- locationResolver(files.targetFile.location)
     sourceBackend <- locationResolver(files.sourceFile.location)
-    content <- sourceBackend.getContent(files.sourceFile.location)
+    sourceContent <- sourceBackend.getContent(files.sourceFile.location)
   } {
     backup(targetBackend, sourceBackend, files.targetFile, "remote")
-    targetBackend.putFile(files.targetFile.location, content, Some(files.sourceFile.version))
-    content.close()
+    targetBackend.putFile(files.targetFile.location, sourceContent, Some(files.sourceFile.version))
+    sourceContent.close()
+
+    if (files.config.removeSource.getOrElse(false)) {
+      sourceBackend.deleteFile(files.sourceFile.location)
+    }
   }
 
   private def backup(targetBackend: FileBackend, sourceBackend: FileBackend, file: VersionedFile, infix: String): Option[String] = {

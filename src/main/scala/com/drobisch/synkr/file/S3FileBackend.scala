@@ -28,7 +28,7 @@ class S3FileBackend(credentials: AWSCredentialConfig) extends FileBackend {
       val modifiedTime = objectMetaData(location.path, bucket, location.region)
         .map(_.getLastModified.getTime)
         .getOrElse(0L)
-      VersionedFile(Location(Some(bucket), location.path, S3FileBackend.scheme), modifiedTime)
+      VersionedFile(Location(Some(bucket), location.path, location.scheme, location.region), modifiedTime)
     }
 
   def getFileContent(location: Location): Option[S3ObjectInputStream] = LogTry {
@@ -54,5 +54,5 @@ class S3FileBackend(credentials: AWSCredentialConfig) extends FileBackend {
     case None => Future.failed(new IllegalArgumentException(s"unable to get content for $location"))
   }
 
-  override def deleteFile(location: Location): Try[Boolean] = ???
+  override def deleteFile(location: Location): Future[Boolean] = ???
 }
