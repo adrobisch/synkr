@@ -4,16 +4,15 @@ import java.io.{File, FileInputStream}
 import java.util.concurrent.{Executors, TimeUnit}
 
 import com.drobisch.synkr.config.Configuration
-import com.drobisch.synkr.file.{LocalFileBackend, S3FileBackend}
-import com.drobisch.synkr.sync.Location.LocationResolver
-import com.drobisch.synkr.sync.{Location, LocationComparison}
-import com.drobisch.synkr.util.Logging.LogTry
+import com.drobisch.synkr.file.{LocalFileBackend, S3FileBackend, S3Object}
+import com.drobisch.synkr.sync.LocationComparison
 import com.drobisch.synkr.util.SystemTraySupport
+import monix.execution.Scheduler
 import org.apache.commons.codec.digest.DigestUtils
 import org.backuity.clist.{Cli, _}
 import org.slf4j.LoggerFactory
 
-import scala.concurrent.Await
+import scala.concurrent.{Await, duration}
 
 trait SynkrApp extends LocationComparison with Configuration {
   val log = LoggerFactory.getLogger(getClass)
@@ -23,12 +22,6 @@ trait SynkrApp extends LocationComparison with Configuration {
     .map(credentials => new S3FileBackend(credentials))
 
   lazy val localFileBackend: LocalFileBackend = new LocalFileBackend
-
-  lazy val locationResolver: LocationResolver = {
-    case Location(_, _, S3FileBackend.scheme, _) => s3FileBackend
-    case Location(_, _, LocalFileBackend.scheme, _) => Some(localFileBackend)
-    case _ => None
-  }
 
   def startSync: Unit = {
     val interval = 5
@@ -40,8 +33,9 @@ trait SynkrApp extends LocationComparison with Configuration {
 
     scheduler.scheduleAtFixedRate(new Runnable {
       override def run(): Unit = {
-        val comparisonResult = compareLocations(config.sync.configs, locationResolver)
-        LogTry(log.info(s"compared: $comparisonResult"))
+        config.sync.configs.foreach { config =>
+          println(s"syncing $config")
+        }
         Unit
       }
     }, 0, interval, unit)
@@ -69,16 +63,15 @@ class Check extends Command(name = "check", description = "check md5sum of a loc
   override def run(): Unit = s3FileBackend.foreach { s3 =>
     println(DigestUtils.md5Hex(new FileInputStream(local)))
     val remoteLocation = remote.replaceFirst("s3://", "").split("/").toList match {
-      case head :: tail => Location(Some(head), tail.mkString("/"), "s3", Some(region))
+      case head :: tail => S3Object(Some(head), tail.mkString("/"), region, None)
     }
-    import scala.concurrent.ExecutionContext.Implicits.global
-    import scala.concurrent.duration._
 
     val md5Sum = Await.result(s3.getContent(remoteLocation).map(stream => {
       val md5Sum = DigestUtils.md5Hex(stream)
       stream.close()
       md5Sum
-    }), Duration.Inf)
+    }).runAsync(Scheduler.global), duration.Duration.Inf)
+
     println(md5Sum)
   }
 }

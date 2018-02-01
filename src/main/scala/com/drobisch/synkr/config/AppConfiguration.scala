@@ -14,9 +14,13 @@ trait Configuration {
   val config: AppConfiguration = AppConfiguration.load.get
 }
 
+case class ConfigLocation(path: String) extends Location {
+  override def parentPath: Option[String] = None
+}
+
 case class FileSyncConfig(id: String,
-                          target: Location,
-                          source: Location,
+                          target: ConfigLocation,
+                          source: ConfigLocation,
                           removeSource: Option[Boolean] = Some(false))
 
 case class SyncerConfiguration(configs: Seq[FileSyncConfig], backupContainer: Option[String])

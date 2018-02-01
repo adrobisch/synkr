@@ -2,7 +2,6 @@ package com.drobisch.synkr.sync
 
 import com.drobisch.synkr.config.FileSyncConfig
 import com.drobisch.synkr.file.FileBackend
-import com.drobisch.synkr.sync.Location.LocationResolver
 import org.scalamock.scalatest.proxy.MockFactory
 import org.scalatest.FlatSpec
 

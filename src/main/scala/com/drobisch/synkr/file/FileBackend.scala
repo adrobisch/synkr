@@ -2,16 +2,16 @@ package com.drobisch.synkr.file
 
 import java.io.InputStream
 
-import com.drobisch.synkr.sync.{Location, VersionedFile}
+import monix.eval.Task
 
-import scala.concurrent.Future
+trait FileBackend[T] {
+  def listFiles(location: T): Task[List[T]]
 
-trait FileBackend {
-  def deleteFile(location: Location): Future[Boolean]
+  def deleteFile(location: T): Task[Boolean]
 
-  def putFile(location: Location, inputStream: InputStream, lastModified: Option[Long]): Option[String]
+  def putFile(location: T, inputStream: InputStream, lastModified: Option[Long]): Option[String]
 
-  def getFile(location: Location): Option[VersionedFile]
+  def getFile(location: T): Option[T]
 
-  def getContent(location: Location): Future[InputStream]
+  def getContent(location: T): Task[InputStream]
 }

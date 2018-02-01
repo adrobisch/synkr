@@ -21,7 +21,8 @@ libraryDependencies ++= Seq(
   "org.scalatest" %% "scalatest" % "3.0.1" % Test,
   "org.scalamock" %% "scalamock-scalatest-support" % "3.5.0" % Test,
   "org.backuity.clist" %% "clist-core"   % "3.2.2",
-  "org.backuity.clist" %% "clist-macros" % "3.2.2" % "provided"
+  "org.backuity.clist" %% "clist-macros" % "3.2.2" % Provided,
+  "io.monix" %% "monix-eval" % "2.3.3"
 )
 
 val circeVersion = "0.9.0"
